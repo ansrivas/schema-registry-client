@@ -1,3 +1,5 @@
+pub mod schema_registry;
+
 #[cfg(test)]
 mod tests {
     #[test]
