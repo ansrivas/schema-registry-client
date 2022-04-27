@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2021 Theo M. Bulut, Ankur Srivastava
+// Copyright (c) 2022 Ankur Srivastava
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@
 //! ```
 
 use crate::errors::DegaussError;
-use crate::schema_registry::types::*;
+use crate::schema_registry_client::types::*;
 
 use isahc::{prelude::*, Body, Response};
 
