@@ -20,28 +20,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//!
-//! A lightweight schema registry client to interact with Kafka Schema Registry.
-//!
-//! ### Usage
-//! ```rust, no_run
-//! use schema_registry_client::prelude::*;
-//! // if username/password is provided
-//! let auth = Auth::Basic {
-//!  username: "user".to_string(),
-//!  password: "pass".to_string(),
-//! };
-//!
-//! // if no username/password then
-//! // let auth = Auth::Skip;
-//! let client = SchemaRegistryClient::new("http://url-of-schema-registry", auth).expect("Failed to create a Schema Registry client");
-//! // Use your client to interact with schema registry
-//!```
-//!
-mod client;
-pub use client::SchemaRegistryClient;
-mod response_ext;
-pub mod types;
-pub use response_ext::ResponseExt;
-mod serde_ext;
-pub use serde_ext::SerdeExt;
+use serde::Serialize;
+
+/// SerdeExt trait to convert any Serializable struct to
+/// json string.
+pub trait SerdeExt {
+    /// Converts a serializable struct to pretty json
+    /// Fails in case the serde fails to convert it to pretty string.
+    ///
+    /// ```rust, no_run
+    /// use serde::Serialize;
+    /// use schema_registry_client::prelude::*;
+    ///
+    /// #[derive(Serialize)]
+    /// pub struct Test{
+    ///   pub name: String
+    /// }
+    ///
+    /// let test = Test{name:"degauss".to_string()};
+    /// println!("{}", test.pretty_string());
+    ///
+    fn pretty_string(&self) -> String;
+}
+
+impl<T> SerdeExt for T
+where
+    T: ?Sized + Serialize,
+{
+    fn pretty_string(&self) -> String {
+        serde_json::to_string(self).unwrap()
+    }
+}

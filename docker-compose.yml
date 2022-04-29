@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+
+  redpanda:
+    image: vectorized/redpanda:latest
+    container_name: redpanda-c
+    ports: 
+      - "9092:9092"
+      - "8082:8082"
+      - "8081:8081"
+    restart: always
+    command: redpanda start --overprovisioned --smp 1 --memory 1G --reserve-memory 0M --node-id 0 --check=false --pandaproxy-addr 0.0.0.0:8082 --advertise-pandaproxy-addr 127.0.0.1:8082 --kafka-addr 0.0.0.0:9092 --advertise-kafka-addr redpanda:9092

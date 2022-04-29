@@ -29,8 +29,8 @@
 //! { error_code: i32, message: String }
 //! ```
 
-use crate::errors::DegaussError;
-use crate::schema_registry_client::types::*;
+use crate::client::types::*;
+use crate::errors::SRError;
 
 use isahc::{prelude::*, Body, Response};
 
@@ -45,16 +45,16 @@ pub trait ResponseExt {
     /// ```json
     /// { error_code: i32, message: String }
     /// ```
-    fn check_for_error(self) -> Result<Response<Body>, DegaussError>;
+    fn check_for_error(self) -> Result<Response<Body>, SRError>;
 }
 
 impl ResponseExt for Response<Body> {
-    fn check_for_error(mut self) -> Result<Response<Body>, DegaussError> {
+    fn check_for_error(mut self) -> Result<Response<Body>, SRError> {
         match self.status().is_success() {
             true => Ok(Response::new(self.into_body())),
             false => {
                 let err_response = self.json::<SchemaRegistryErrResponse>()?;
-                Err(DegaussError::SrHttp {
+                Err(SRError::SrHttp {
                     error_code: err_response.error_code,
                     message: err_response.message,
                 })
