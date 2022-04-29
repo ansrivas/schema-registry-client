@@ -20,34 +20,53 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-/// SerdeExt trait to convert any Serializable struct to
-/// json string.
-pub trait SerdeExt {
-    /// Converts a serializable struct to pretty json
-    /// Fails in case the serde fails to convert it to pretty string.
-    ///
-    /// ```rust, no_run
-    /// use serde::Serialize;
-    /// use degauss::prelude::*;
-    ///
-    /// #[derive(Serialize)]
-    /// pub struct Test{
-    ///   pub name: String
-    /// }
-    ///
-    /// let test = Test{name:"degauss".to_string()};
-    /// println!("{}", test.pretty_string());
-    ///
-    fn pretty_string(&self) -> String;
+#[derive(Debug)]
+pub enum Auth {
+    Basic { username: String, password: String },
+    None,
+}
+use strum::{Display, EnumIter, EnumString, EnumVariantNames};
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SchemaRegistryErrResponse {
+    pub error_code: i32,
+    pub message: String,
 }
 
-impl<T> SerdeExt for T
-where
-    T: ?Sized + Serialize,
-{
-    fn pretty_string(&self) -> String {
-        serde_json::to_string(self).unwrap()
-    }
+/// The subject for this we are going to register a schema
+#[derive(
+    EnumIter,
+    EnumVariantNames,
+    EnumString,
+    Display,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+)]
+pub enum SchemaSubjectType {
+    #[strum(serialize = "key")]
+    Key,
+    #[strum(serialize = "value")]
+    Value,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SchemaRegistrationResponse {
+    pub id: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SchemaCompatibleResponse {
+    pub is_compatible: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SchemaGetResponse {
+    pub schema: String,
 }

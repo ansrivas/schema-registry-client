@@ -20,47 +20,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! Errors to be used with the library, converts to and from
-//! other dependencies' errors.
-
-use thiserror::Error;
-
-#[allow(dead_code)]
-#[derive(Error, Debug)]
-pub enum SRError {
-    #[error("File read error")]
-    IO(#[from] std::io::Error),
-
-    #[error("Schema parsing error")]
-    Schema(#[from] avro_rs::Error),
-
-    #[error("Serializing/Deserializing error  {source}")]
-    Serde {
-        #[from]
-        source: serde_json::Error,
-    },
-
-    #[error("Status Code `{error_code}` Message: {message}")]
-    SrHttp { error_code: i32, message: String },
-
-    #[error("{0}")]
-    Custom(String),
-
-    #[error("HTTPClientError: {source}")]
-    HTTPClient {
-        #[from]
-        source: isahc::Error,
-    },
-
-    #[error("HTTPRequestError: {0}")]
-    HTTPRequestError(String),
-
-    #[error("HTTPError: {source}")]
-    Http {
-        #[from]
-        source: isahc::http::Error,
-    },
-
-    #[error("UnsupportedHTTPMethod: {0}")]
-    UnsupportedHTTPMethod(String),
-}
+//!
+//! A lightweight schema registry client to interact with Kafka Schema Registry.
+//!
+//! ### Usage
+//! ```rust, no_run
+//! use schema_registry_client::prelude::*;
+//! use schema_registry_client::SchemaRegistryClient;
+//! // if username/password is provided
+//! let auth = Auth::Basic {
+//!  username: "user".to_string(),
+//!  password: "pass".to_string(),
+//! };
+//!
+//! // if no username/password then
+//! // let auth = Auth::Skip;
+//! let client = SchemaRegistryClient::new("http://url-of-schema-registry", auth).expect("Failed to create a Schema Registry client");
+//! // Use your client to interact with schema registry
+//!```
+mod srclient;
+pub use srclient::SchemaRegistryClient;
+mod response_ext;
+pub mod types;
+pub use response_ext::ResponseExt;
