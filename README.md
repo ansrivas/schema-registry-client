@@ -1,1 +1,1 @@
-## Schema Registry Client
+## WIP: Schema Registry Client
