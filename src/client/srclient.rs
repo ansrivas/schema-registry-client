@@ -1,7 +1,7 @@
 use crate::client::types::*;
 use crate::errors::SRError;
 use avro_rs::Schema;
-
+use dashmap::DashMap;
 use isahc::{
     auth::{Authentication, Credentials},
     config::{RedirectPolicy, VersionNegotiation},
@@ -9,6 +9,7 @@ use isahc::{
     HttpClient,
 };
 use isahc::{AsyncBody, AsyncReadResponseExt, ResponseFuture};
+use std::sync::Arc;
 use std::time::Duration;
 
 /// Create an instance of SchemaRegistryClient
@@ -28,16 +29,10 @@ use std::time::Duration;
 pub struct SchemaRegistryClient {
     httpclient: isahc::HttpClient,
     url: String,
+    cache: Arc<DashMap<i32, String>>,
 }
 
 impl SchemaRegistryClient {
-    fn get_subject_from_topic(&self, topic: &str, subject: SchemaSubjectType) -> String {
-        match subject {
-            SchemaSubjectType::Key => format!("{}-key", topic),
-            SchemaSubjectType::Value => format!("{}-value", topic),
-        }
-    }
-
     /// Create a new instance of SchemaRegistryClient
     ///
     /// ```rust,no_run
@@ -69,7 +64,15 @@ impl SchemaRegistryClient {
         Ok(Self {
             httpclient,
             url: url.into(),
+            cache: Arc::new(DashMap::new()),
         })
+    }
+
+    fn get_subject_from_topic(&self, topic: &str, subject: SchemaSubjectType) -> String {
+        match subject {
+            SchemaSubjectType::Key => format!("{}-key", topic),
+            SchemaSubjectType::Value => format!("{}-value", topic),
+        }
     }
 
     pub async fn request<T, R>(
@@ -131,17 +134,29 @@ impl SchemaRegistryClient {
     }
 
     /// Get the schema
-    pub async fn get_schema(&self, id: i32) -> Result<SchemaGetResponse, SRError> {
-        let url = format!("{url}/schemas/ids/{id}", url = self.url, id = id,);
-        let resp = self.request(&url, isahc::http::Method::GET, ()).await?;
-        Ok(resp)
+    pub async fn get_schema(&self, id: i32) -> Result<String, SRError> {
+        let schema = match self.cache.get(&id) {
+            Some(sc) => {
+                tracing::debug!("Found in cache.");
+                sc.value().clone()
+            }
+            None => {
+                tracing::debug!("Not in cache, making a schema registry call.");
+                let url = format!("{url}/schemas/ids/{id}", url = self.url, id = id,);
+                let resp: SchemaGetResponse =
+                    self.request(&url, isahc::http::Method::GET, ()).await?;
+                self.cache.insert(id, resp.schema.clone());
+                resp.schema
+            }
+        };
+        Ok(schema)
     }
 
     /// Get the latest schema
-    pub async fn get_schema_latest(&self) -> Result<SchemaGetResponse, SRError> {
+    pub async fn get_schema_latest(&self) -> Result<String, SRError> {
         let url = format!("{url}/schemas/ids/latest", url = self.url);
-        let resp = self.request(&url, isahc::http::Method::GET, ()).await?;
-        Ok(resp)
+        let resp: SchemaGetResponse = self.request(&url, isahc::http::Method::GET, ()).await?;
+        Ok(resp.schema)
     }
 }
 
@@ -186,7 +201,7 @@ mod tests {
         assert!(res.id > 0);
 
         let resp = client.get_schema(1).await.unwrap();
-        assert!(Schema::parse_str(&resp.schema).unwrap() == test_schema());
-        assert!(!resp.schema.is_empty())
+        assert!(Schema::parse_str(&resp).unwrap() == test_schema());
+        assert!(!resp.is_empty())
     }
 }

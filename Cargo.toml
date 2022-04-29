@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 ## Error handling
-anyhow = "1.0"
 thiserror = "1.0"
 
 ## HTTP Client
@@ -23,10 +22,9 @@ isahc = { version = "1.7.0", default-features = false, features = [
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 strum = { version = "0.24.0", features = ["derive"] }
-# avro-rs = { git = "https://github.com/ansrivas/avro", tag = "v0.14.0-20220427" }
 
 avro-rs = { git = "https://github.com/ansrivas/avro", tag = "v0.14.0-dev1" }
-rand = "0.8.5"
+dashmap = "5.2.0"
 
 
 ## Logging
@@ -35,4 +33,9 @@ tracing = "0.1"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
-dashmap = "5.2.0"
+rand = "0.8.5"
+tracing-subscriber = { version = "0.3", features = [
+    "env-filter",
+    "fmt",
+    "json",
+] }
