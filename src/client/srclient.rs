@@ -1,4 +1,5 @@
 use crate::client::types::*;
+use crate::client::ResponseExt;
 use crate::errors::SRError;
 use avro_rs::Schema;
 use dashmap::DashMap;
@@ -61,6 +62,7 @@ impl SchemaRegistryClient {
             Auth::None => builder,
         }
         .build()?;
+
         Ok(Self {
             httpclient,
             url: url.into(),
@@ -94,18 +96,10 @@ impl SchemaRegistryClient {
             _ => return Err(SRError::UnsupportedHTTPMethod(method.to_string())),
         };
 
-        let mut resp = rfuture.await?;
-        if resp.status() != isahc::http::StatusCode::OK {
-            let text = resp.text().await.unwrap();
-            tracing::error!("make_request: {} {:?}", resp.status(), text);
-            return Err(SRError::HTTPRequestError(format!(
-                "{} {:?}",
-                resp.status(),
-                text
-            )));
-        }
-
-        let json_response = resp
+        let json_response = rfuture
+            .await?
+            .check_for_error()
+            .await?
             .json::<R>()
             .await
             .map_err(|source| SRError::Serde { source })?;

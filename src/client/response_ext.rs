@@ -32,10 +32,12 @@
 use crate::client::types::*;
 use crate::errors::SRError;
 
-use isahc::{prelude::*, Body, Response};
+use async_trait::async_trait;
+use isahc::{prelude::*, AsyncBody, Response};
 
 /// ResponseExt trait for checking errors in the incoming response
 /// from Kafka Schema Registry
+#[async_trait]
 pub trait ResponseExt {
     /// Check for error in the incoming response from Kafka Schema Registry
     ///
@@ -45,15 +47,16 @@ pub trait ResponseExt {
     /// ```json
     /// { error_code: i32, message: String }
     /// ```
-    fn check_for_error(self) -> Result<Response<Body>, SRError>;
+    async fn check_for_error(self) -> Result<Response<AsyncBody>, SRError>;
 }
 
-impl ResponseExt for Response<Body> {
-    fn check_for_error(mut self) -> Result<Response<Body>, SRError> {
+#[async_trait]
+impl ResponseExt for Response<AsyncBody> {
+    async fn check_for_error(mut self) -> Result<Response<AsyncBody>, SRError> {
         match self.status().is_success() {
             true => Ok(Response::new(self.into_body())),
             false => {
-                let err_response = self.json::<SchemaRegistryErrResponse>()?;
+                let err_response = self.json::<SchemaRegistryErrResponse>().await?;
                 Err(SRError::SrHttp {
                     error_code: err_response.error_code,
                     message: err_response.message,
