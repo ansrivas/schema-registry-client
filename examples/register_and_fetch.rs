@@ -11,8 +11,10 @@ async fn query_endpoint(id: i32) -> Schema {
 
 async fn get_or_cache(cache: Arc<DashMap<i32, Schema>>, id: i32) -> Schema {
     if let Some(schema) = cache.get(&id) {
+        println!("Returning from cache");
         schema.value().clone()
     } else {
+        println!("Returning from schema-registry");
         let schema = query_endpoint(id).await;
         cache.insert(id, schema.clone());
         schema
@@ -22,6 +24,6 @@ async fn get_or_cache(cache: Arc<DashMap<i32, Schema>>, id: i32) -> Schema {
 #[tokio::main]
 async fn main() {
     let cache = Arc::new(DashMap::new());
-    let schema = get_or_cache(cache, 1).await;
-    println!("{:?}", schema);
+    let _schema = get_or_cache(cache.clone(), 1).await;
+    let _schema = get_or_cache(cache, 1).await;
 }
