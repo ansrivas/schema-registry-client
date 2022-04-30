@@ -1,6 +1,7 @@
 use crate::client::types::*;
 use crate::client::ResponseExt;
 use crate::errors::SRError;
+use async_lock::Mutex;
 use avro_rs::Schema;
 use isahc::{
     auth::{Authentication, Credentials},
@@ -11,7 +12,6 @@ use isahc::{
 use isahc::{AsyncBody, AsyncReadResponseExt, ResponseFuture};
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::Duration;
 
 /// Create an instance of SchemaRegistryClient
@@ -130,7 +130,7 @@ impl SchemaRegistryClient {
 
     /// Get the schema
     pub async fn get_schema(&self, id: i32) -> Result<String, SRError> {
-        let mut c = self.cache.lock().unwrap();
+        let mut c = self.cache.lock().await;
         let schema = match c.get(&id) {
             Some(sc) => {
                 tracing::debug!("Found in cache.");
