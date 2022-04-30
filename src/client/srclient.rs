@@ -2,7 +2,6 @@ use crate::client::types::*;
 use crate::client::ResponseExt;
 use crate::errors::SRError;
 use avro_rs::Schema;
-use dashmap::DashMap;
 use isahc::{
     auth::{Authentication, Credentials},
     config::{RedirectPolicy, VersionNegotiation},
@@ -10,7 +9,9 @@ use isahc::{
     HttpClient,
 };
 use isahc::{AsyncBody, AsyncReadResponseExt, ResponseFuture};
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 
 /// Create an instance of SchemaRegistryClient
@@ -30,7 +31,7 @@ use std::time::Duration;
 pub struct SchemaRegistryClient {
     httpclient: isahc::HttpClient,
     url: String,
-    cache: Arc<DashMap<i32, String>>,
+    cache: Arc<Mutex<HashMap<i32, String>>>,
 }
 
 impl SchemaRegistryClient {
@@ -66,7 +67,7 @@ impl SchemaRegistryClient {
         Ok(Self {
             httpclient,
             url: url.into(),
-            cache: Arc::new(DashMap::new()),
+            cache: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 
@@ -129,17 +130,18 @@ impl SchemaRegistryClient {
 
     /// Get the schema
     pub async fn get_schema(&self, id: i32) -> Result<String, SRError> {
-        let schema = match self.cache.get(&id) {
+        let mut c = self.cache.lock().unwrap();
+        let schema = match c.get(&id) {
             Some(sc) => {
                 tracing::debug!("Found in cache.");
-                sc.value().clone()
+                sc.to_string()
             }
             None => {
                 tracing::debug!("Not in cache, making a schema registry call.");
                 let url = format!("{url}/schemas/ids/{id}", url = self.url, id = id,);
                 let resp: SchemaGetResponse =
                     self.request(&url, isahc::http::Method::GET, ()).await?;
-                self.cache.insert(id, resp.schema.clone());
+                c.insert(id, resp.schema.clone());
                 resp.schema
             }
         };

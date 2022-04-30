@@ -23,8 +23,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 strum = { version = "0.24.0", features = ["derive"] }
 
-avro-rs = { git = "https://github.com/ansrivas/avro", tag = "v0.14.0-dev1" }
-dashmap = "5.2.0"
+avro-rs = { version = "0.13.0" }
 async-trait = "0.1.53"
 
 ## Logging
