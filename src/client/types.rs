@@ -30,6 +30,7 @@ pub enum Auth {
 use strum::{Display, EnumIter, EnumString, EnumVariantNames};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SchemaRegistryErrResponse {
+    #[serde(alias = "code")]
     pub error_code: i32,
     pub message: String,
 }
