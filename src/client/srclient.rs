@@ -13,6 +13,7 @@ use isahc::{AsyncBody, AsyncReadResponseExt, ResponseFuture};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
+use tracing::{field, instrument, Instrument};
 
 /// Create an instance of SchemaRegistryClient
 ///
@@ -78,6 +79,7 @@ impl SchemaRegistryClient {
         }
     }
 
+    #[instrument(level = "debug", skip(body))]
     pub async fn request<T, R>(
         &self,
         url: &str,
@@ -108,6 +110,7 @@ impl SchemaRegistryClient {
     }
 
     /// Register the given schema to schema-registry
+    #[instrument(level = "debug")]
     pub async fn register_schema(
         &self,
         schema: &Schema,
@@ -129,23 +132,29 @@ impl SchemaRegistryClient {
     }
 
     /// Get the schema
+    #[instrument(level = "info")]
     pub async fn get_schema(&self, id: i32) -> Result<String, SRError> {
-        let mut c = self.cache.lock().await;
-        let schema = match c.get(&id) {
-            Some(sc) => {
-                tracing::debug!("Found in cache.");
-                sc.to_string()
-            }
-            None => {
-                tracing::debug!("Not in cache, making a schema registry call.");
-                let url = format!("{url}/schemas/ids/{id}", url = self.url, id = id,);
-                let resp: SchemaGetResponse =
-                    self.request(&url, isahc::http::Method::GET, ()).await?;
-                c.insert(id, resp.schema.clone());
-                resp.schema
-            }
+        let span = tracing::info_span!("get_schema", id = id, from_cache = field::Empty);
+
+        let fut = async move {
+            let mut c = self.cache.lock().await;
+            let schema = match c.get(&id) {
+                Some(sc) => {
+                    tracing::Span::current().record("from_cache", &"true");
+                    sc.to_string()
+                }
+                None => {
+                    tracing::Span::current().record("from_cache", &"false");
+                    let url = format!("{url}/schemas/ids/{id}", url = self.url, id = id,);
+                    let resp: SchemaGetResponse =
+                        self.request(&url, isahc::http::Method::GET, ()).await?;
+                    c.insert(id, resp.schema.clone());
+                    resp.schema
+                }
+            };
+            Ok(schema)
         };
-        Ok(schema)
+        fut.instrument(span).await
     }
 
     /// Get the latest schema
