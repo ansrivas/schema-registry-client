@@ -2,7 +2,7 @@ use crate::client::types::*;
 use crate::client::ResponseExt;
 use crate::errors::SRError;
 use async_lock::Mutex;
-use avro_rs::Schema;
+use avro_rs::{from_value, Reader, Schema};
 use isahc::{
     auth::{Authentication, Credentials},
     config::{RedirectPolicy, VersionNegotiation},
@@ -156,12 +156,62 @@ impl SchemaRegistryClient {
     }
 }
 
+// pub async fn deserialize_message<T: serde::de::DeserializeOwned + Clone>(
+//     client: &SchemaRegistryClient,
+//     msg: &[u8],
+// ) -> Result<T, SRError> {
+//     let mut buf = &msg[1..5];
+//     let id = buf.read_i32::<BigEndian>().unwrap();
+//     println!("{:?}", id);
+//     let schema = client.get_schema(id).await?;
+//     let schema = Schema::parse_str(&schema)?;
+
+//     let payload = &msg[5..];
+//     let result = Reader::with_schema(&schema, payload)?
+//         .into_iter()
+//         .map(|val| from_value::<T>(&val?))
+//         .take(1)
+//         .collect::<Result<Vec<T>, _>>()?;
+//     Ok(result[0].clone())
+// }
+
+pub async fn deserialize_message<T: serde::de::DeserializeOwned + Clone>(
+    client: &SchemaRegistryClient,
+    msg: &[u8],
+) -> Result<T, SRError> {
+    // TODO (ansrivas): Check if the msg len is > 5 and magic byte is set
+
+    let mut buf = [0u8; 4];
+    buf.copy_from_slice(&msg[1..5]);
+    let id = i32::from_be_bytes(buf);
+
+    let schema = client.get_schema(id).await?;
+    let schema = Schema::parse_str(&schema)?;
+
+    let payload = &msg[5..];
+    let result = Reader::with_schema(&schema, payload)?
+        .into_iter()
+        .map(|val| from_value::<T>(&val?))
+        .take(1)
+        .collect::<Result<Vec<T>, _>>()?;
+    Ok(result[0].clone())
+}
+
 #[cfg(test)]
 mod tests {
 
     use super::*;
+    use crate::client::admin::AdminClient;
+    use crate::client::consumer::Consumer;
+    use crate::client::producer::Producer;
+
     use crate::FromFile;
     use avro_rs::Schema;
+    use futures_lite::StreamExt;
+    use rdkafka::Message;
+    use serde::{Deserialize, Serialize};
+    use tokio::sync::oneshot;
+    use tokio::time::{timeout_at, Instant};
 
     fn test_client() -> SchemaRegistryClient {
         let url = "http://localhost:8081";
@@ -199,5 +249,66 @@ mod tests {
         let resp = client.get_schema(1).await.unwrap();
         assert!(Schema::parse_str(&resp).unwrap() == test_schema());
         assert!(!resp.is_empty())
+    }
+
+    #[tokio::test]
+    async fn test_producer_consumer() {
+        let bootstrap_server = "localhost:9092";
+        // let topic = random_chars(5, "topic_");
+        let topic = "topic";
+
+        let admin_client = AdminClient::new(bootstrap_server);
+        admin_client.create_topic(&topic).await;
+
+        let sr_client = test_client();
+
+        let schema = test_schema();
+        let res = sr_client
+            .register_schema(&schema, &topic, SchemaSubjectType::Value)
+            .await
+            .unwrap();
+
+        let (tx, rx) = oneshot::channel::<Vec<u8>>();
+
+        #[derive(Serialize, Deserialize, Clone, Debug)]
+        struct MyRecord {
+            pub f1: String,
+            pub f2: String,
+        }
+
+        let record = MyRecord {
+            f1: "ankur".to_string(),
+            f2: "srivastava".to_string(),
+        };
+
+        let group_id = random_chars(5, "group_");
+        let consumer = Consumer::new(bootstrap_server, &group_id, &[&topic]);
+        tokio::spawn(async move {
+            tracing::info!("**** Spawned the agent ****");
+            let mut stream = consumer.inner.stream();
+            while let Some(msg) = stream.next().await {
+                tx.send(msg.unwrap().payload().unwrap().to_vec()).unwrap();
+                break;
+            }
+        });
+
+        // Giving sometime for this consumer to be spawned
+        tokio::time::sleep(Duration::from_secs(1)).await;
+
+        println!("schema-id: {}", &res.id);
+
+        let prod = Producer::new_with_schema_registry(bootstrap_server, None, None, sr_client);
+        prod.produce_avro_with_schema(&record, &topic, res.id, Some("key"))
+            .await
+            .unwrap();
+
+        match timeout_at(Instant::now() + Duration::from_secs(5), rx).await {
+            Ok(Ok(v)) => {
+                let record: MyRecord = deserialize_message(&test_client(), &v).await.unwrap();
+                println!("Record is {:?}", &record);
+            }
+            Ok(Err(e)) => assert!(false, "{:?}", e),
+            Err(e) => assert!(false, "Timeout occurred: {:?}", e),
+        }
     }
 }

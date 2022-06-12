@@ -43,3 +43,7 @@ pub use srclient::SchemaRegistryClient;
 mod response_ext;
 pub mod types;
 pub use response_ext::ResponseExt;
+
+pub(crate) mod admin;
+pub(crate) mod consumer;
+pub(crate) mod producer;

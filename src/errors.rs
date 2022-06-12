@@ -63,4 +63,8 @@ pub enum SRError {
 
     #[error("UnsupportedHTTPMethod: {0}")]
     UnsupportedHTTPMethod(String),
+
+    // Kafka send/receive error
+    #[error(transparent)]
+    KafkaError(#[from] rdkafka::error::KafkaError),
 }
