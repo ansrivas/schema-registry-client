@@ -5,7 +5,7 @@ mod client;
 pub use client::{types, SchemaRegistryClient};
 pub use serde_ext::SerdeExt;
 mod serde_ext;
-pub use avro_rs;
+pub use apache_avro;
 pub mod prelude {
     pub use super::schema::FromFile;
     pub use super::types::*;

@@ -1,6 +1,6 @@
 [package]
 name = "schema-registry-client"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -10,7 +10,7 @@ edition = "2021"
 thiserror = "1.0"
 
 ## HTTP Client
-isahc = { version = "1.7.0", default-features = false, features = [
+isahc = { version = "1.7", default-features = false, features = [
     "json",
     "static-ssl",
     "static-curl",
@@ -21,22 +21,23 @@ isahc = { version = "1.7.0", default-features = false, features = [
 ## Serialize/Deserialize
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-strum = { version = "0.24.0", features = ["derive"] }
+strum = { version = "0.24", features = ["derive"] }
 
-avro-rs = { version = "0.13.0" }
-async-trait = "0.1.53"
+apache-avro = { version = "0.14.0" }
+
+async-trait = "0.1"
 
 ## Logging
 tracing = "0.1"
-async-lock = "2.5.0"
+async-lock = "2.5"
 
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
-rand = "0.8.5"
+rand = "0.8"
 tracing-subscriber = { version = "0.3", features = [
     "env-filter",
     "fmt",
     "json",
 ] }
-async-trait = "0.1.53"
+async-trait = "0.1"

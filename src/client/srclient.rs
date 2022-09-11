@@ -1,8 +1,8 @@
 use crate::client::types::*;
 use crate::client::ResponseExt;
 use crate::errors::SRError;
+use apache_avro::Schema;
 use async_lock::Mutex;
-use avro_rs::Schema;
 use isahc::{
     auth::{Authentication, Credentials},
     config::{RedirectPolicy, VersionNegotiation},
@@ -170,7 +170,7 @@ mod tests {
 
     use super::*;
     use crate::FromFile;
-    use avro_rs::Schema;
+    use apache_avro::Schema;
 
     fn test_client() -> SchemaRegistryClient {
         let url = "http://localhost:8081";
