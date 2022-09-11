@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.4.0] - 2022-09-11
+## [0.5.0] - 2022-09-11
 ### Breaking Change
 - Use `apache_avro == 0.14.0` in place of `avro-rs`
 
