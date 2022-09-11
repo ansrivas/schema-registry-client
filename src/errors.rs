@@ -32,7 +32,7 @@ pub enum SRError {
     IO(#[from] std::io::Error),
 
     #[error("Schema parsing error")]
-    Schema(#[from] avro_rs::Error),
+    Schema(#[from] apache_avro::Error),
 
     #[error("Serializing/Deserializing error  {source}")]
     Serde {
