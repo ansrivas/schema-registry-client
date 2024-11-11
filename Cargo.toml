@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 ## Error handling
-thiserror = "1.0"
+thiserror = "2.0"
 
 ## HTTP Client
 isahc = { version = "1.7", default-features = false, features = [
