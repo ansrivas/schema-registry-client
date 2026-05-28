@@ -10,7 +10,7 @@ edition = "2021"
 thiserror = "2.0"
 
 ## HTTP Client
-isahc = { version = "1.7", default-features = false, features = [
+isahc = { version = "2.0", default-features = false, features = [
     "json",
     "static-ssl",
     "static-curl",
